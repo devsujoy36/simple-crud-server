@@ -22,29 +22,52 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
-    const userCollection = client.db("usersDB").collection("users");
+    const userModel = client.db("usersDB").collection("users");
 
-    app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray()
+
+    app.post("/adduser", async (req, res) => {
+      const user = req.body;
+      const result = await userModel.insertOne(user);
       res.send(result)
     })
 
-
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      console.log("New User: ", user)
-      const result = await userCollection.insertOne(user);
+    app.get("/users", async (req, res) => {
+      const result = await userModel.find().toArray()
       res.send(result)
+    })
+
+    app.get("/users/:id", async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const user = await userModel.findOne(query)
+      res.send(user)
     })
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Please delete from db", id)
-
       const query = { _id: new ObjectId(id) }
-      const result = await userCollection.deleteOne(query)
+      const result = await userModel.deleteOne(query)
       res.send(result)
     })
+
+    app.put("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const user = req.body;
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const updatedUser = {
+        $set: {
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          password: user.password,
+        }
+      }
+      const result = await userModel.updateOne(query, updatedUser, options)
+      res.send(result)
+    })
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -63,7 +86,3 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`server is running on port: ${port}`)
 })
-
-
-// devsujoydas
-// mongodbdevsujoydas
